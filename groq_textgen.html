@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hyper AI Chat</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      transition: all 0.25s ease;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      height: 100vh;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      background-size: 400% 400%;
+      animation: gradientShift 12s ease infinite, fadeInUp 0.7s ease;
+      display: flex;
+      overflow: hidden;
+    }
+
+    body.initial-load #main {
+      animation: fadeInUp 0.7s ease, scaleFadeIn 0.5s ease;
+    }
+
+    @keyframes gradientShift {
+      0% {background-position: 0% 50%;}
+      50% {background-position: 100% 50%;}
+      100% {background-position: 0% 50%;}
+    }
+
+    @keyframes fadeInUp {
+      from {opacity: 0; transform: translateY(30px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+
+    @keyframes scaleFadeIn {
+      from {opacity: 0; transform: scale(0.95);}
+      to {opacity: 1; transform: scale(1);}
+    }
+
+    #sidebarToggle {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 100;
+      background: #34495e;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #sidebar {
+      width: 260px;
+      background: #2c3e50;
+      color: white;
+      padding: 16px;
+      display: none;
+      flex-direction: column;
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      z-index: 99;
+      animation: slideIn 0.3s ease forwards;
+      border-right: 2px solid #1a252f;
+    }
+
+    #sidebar.open {
+      display: flex;
+      animation: slideIn 0.3s ease, fadeInUp 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from { left: -260px; }
+      to { left: 0; }
+    }
+
+    #sidebar h2 {
+      font-size: 20px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .chat-list {
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .chat-item {
+      background: #34495e;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      position: relative;
+      animation: scaleFadeIn 0.3s ease;
+    }
+
+    .chat-item:hover {
+      background: #3f5872;
+    }
+
+    .chat-options {
+      display: none;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #555;
+      border-radius: 4px;
+      padding: 6px;
+    }
+
+    .chat-item.show-options .chat-options {
+      display: block;
+    }
+
+    .chat-options button {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      padding: 18px;
+      font-size: 2em;
+      font-weight: bold;
+      text-align: center;
+      color: #00ffc3;
+      text-shadow: 0 0 8px #00ffc3;
+    }
+
+    #suggestedTopics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 12px 20px;
+      background: rgba(255,255,255,0.05);
+    }
+
+    .topic-btn {
+      padding: 8px 14px;
+      background: #e6f0ff;
+      border-radius: 6px;
+      border: 1px solid #b3d1ff;
+      cursor: pointer;
+    }
+
+    .topic-btn:hover {
+      background: #d0e4ff;
+    }
+
+    #chatContainer {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .message {
+      max-width: 80%;
+      padding: 14px 18px;
+      border-radius: 14px;
+      font-size: 15px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      white-space: pre-wrap;
+      animation: scaleFadeIn 0.35s ease;
+    }
+
+    .user {
+      background: #00ffc352;
+      align-self: flex-end;
+      color: white;
+    }
+
+    .bot {
+      background: #ffffff18;
+      align-self: flex-start;
+      color: white;
+    }
+
+    .tools {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .tool-btn, .suggest-btn {
+      font-size: 13px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .tool-btn {
+      background: #eee;
+    }
+
+    .suggest-btn {
+      background: #e8f7e6;
+    }
+
+    .suggestions {
+      margin-top: 10px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    #inputBox {
+      display: flex;
+      padding: 16px;
+      background: rgba(255,255,255,0.05);
+      border-top: 1px solid #ccc;
+    }
+
+    #prompt {
+      flex: 1;
+      padding: 10px 14px;
+      font-size: 15px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: white;
+    }
+
+    #sendBtn {
+      margin-left: 10px;
+      padding: 10px 18px;
+      background: #1abc9c;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s, transform 0.3s;
+    }
+
+    #sendBtn:hover {
+      background: #16a085;
+      transform: scale(1.05);
+    }
+  </style>
+</head>
+<body class="initial-load">
+  <button id="sidebarToggle">☰</button>
+  <div id="sidebar">
+    <h2>Hyper AI <button onclick="newChat()">＋</button></h2>
+    <div class="chat-list" id="chatList"></div>
+  </div>
+  <div id="main">
+    <header>Hyper AI Chat</header>
+    <div id="suggestedTopics">
+      <button class="topic-btn">Top 5 AI tools</button>
+      <button class="topic-btn">Benefits of Yoga</button>
+      <button class="topic-btn">Space discoveries</button>
+      <button class="topic-btn">Indian history facts</button>
+      <button class="topic-btn">Motivation quotes</button>
+      <button class="topic-btn">Startup ideas</button>
+    </div>
+    <div id="chatContainer"></div>
+    <div id="inputBox">
+      <input type="text" id="prompt" placeholder="Type your message...">
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const API_KEY = "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";
+    const API_URL = "https://api.groq.com/openai/v1/chat/completions";
+    const modelName = "llama-3.1-8b-instant";
+
+    const chatListEl = document.getElementById("chatList");
+    const chatContainer = document.getElementById("chatContainer");
+    const promptInput = document.getElementById("prompt");
+    const sendBtn = document.getElementById("sendBtn");
+    const topicBtns = document.querySelectorAll(".topic-btn");
+    const sidebar = document.getElementById("sidebar");
+
+    let chats = JSON.parse(localStorage.getItem("hyper_chats")) || {};
+    let currentChatId = localStorage.getItem("hyper_current") || null;
+
+    if (!currentChatId) newChat(); else renderChat();
+
+    document.getElementById("sidebarToggle").onclick = () => {
+      sidebar.classList.toggle("open");
+    };
+
+    window.addEventListener("DOMContentLoaded", () => {
+      document.body.classList.remove("initial-load");
+    });
+
+    function newChat() {
+      currentChatId = "chat-" + Date.now();
+      chats[currentChatId] = [];
+      saveChats();
+      renderChatList();
+      renderChat();
+    }
+
+    function saveChats() {
+      localStorage.setItem("hyper_chats", JSON.stringify(chats));
+      localStorage.setItem("hyper_current", currentChatId);
+    }
+
+    function renderChatList() {
+      chatListEl.innerHTML = "";
+      Object.keys(chats).forEach(id => {
+        const title = chats[id][0]?.content?.slice(0, 30) || "Untitled";
+        const div = document.createElement("div");
+        div.className = "chat-item";
+        div.innerHTML = `<span>${title}</span><div class='chat-options'><button onclick='renameChat("${id}")'>Rename</button><button onclick='deleteChat("${id}")'>Delete</button></div>`;
+        div.ondblclick = () => div.classList.toggle("show-options");
+        div.onclick = () => {
+          currentChatId = id;
+          saveChats();
+          renderChat();
+          sidebar.classList.remove("open");
+        };
+        chatListEl.appendChild(div);
+      });
+    }
+
+    function renameChat(id) {
+      const newName = prompt("New name:", chats[id][0]?.content);
+      if (newName) {
+        chats[id][0].content = newName;
+        saveChats();
+        renderChatList();
+      }
+    }
+
+    function deleteChat(id) {
+      if (!confirm("Delete this chat?")) return;
+      const keys = Object.keys(chats);
+      const idx = keys.indexOf(id);
+      delete chats[id];
+      currentChatId = keys[idx + 1] || keys[idx - 1] || null;
+      if (!currentChatId) newChat();
+      else {
+        saveChats();
+        renderChatList();
+        renderChat();
+      }
+    }
+
+    function renderChat() {
+      chatContainer.innerHTML = "";
+      const history = chats[currentChatId] || [];
+      history.forEach((entry, idx) => {
+        const div = document.createElement("div");
+        div.className = `message ${entry.role === 'user' ? 'user' : 'bot'}`;
+        const cleanedContent = entry.content
+          .replace(/^\*\s*/gm, '') // Remove * at start of lines
+          .replace(/\n\s*\n/g, '\n\n') // Remove multiple blank lines
+          .replace(/\n(?=\S)/g, '\n\n'); // Add spacing between subtopics
+        div.innerHTML = `<p>${cleanedContent}</p>`;
+        const tools = document.createElement("div");
+        tools.className = "tools";
+        tools.innerHTML = `<button class='tool-btn' onclick='copyMsg(${idx})'>Copy</button>`;
+        if (entry.role === 'user')
+          tools.innerHTML += `<button class='tool-btn' onclick='editMsg(${idx})'>Edit</button>`;
+        div.appendChild(tools);
+        if (entry.suggestions) {
+          const suggestDiv = document.createElement("div");
+          suggestDiv.className = "suggestions";
+          entry.suggestions.forEach(s => {
+            const b = document.createElement("button");
+            b.className = "suggest-btn";
+            b.textContent = s;
+            b.onclick = () => {
+              promptInput.value = s;
+              promptInput.focus();
+            };
+            suggestDiv.appendChild(b);
+          });
+          div.appendChild(suggestDiv);
+        }
+        chatContainer.appendChild(div);
+      });
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    function copyMsg(i) {
+      navigator.clipboard.writeText(chats[currentChatId][i].content);
+    }
+
+    function editMsg(i) {
+      const newM = prompt("Edit your message:", chats[currentChatId][i].content);
+      if (newM != null) {
+        chats[currentChatId][i].content = newM;
+        chats[currentChatId] = chats[currentChatId].slice(0, i + 1);
+        saveChats();
+        renderChat();
+        promptInput.value = newM;
+        promptInput.focus();
+      }
+    }
+
+    async function sendMessage() {
+      const txt = promptInput.value.trim();
+      if (!txt) return;
+      document.getElementById("suggestedTopics").style.display = "none"; // Hide topics
+      chats[currentChatId].push({ role: "user", content: txt });
+      chats[currentChatId].push({ role: "assistant", content: "<i>Generating...</i>" });
+      saveChats();
+      renderChat();
+      promptInput.value = "";
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: modelName,
+            messages: chats[currentChatId]
+              .filter(x => x.role === 'user' || x.role === 'assistant')
+              .map(x => ({ role: x.role, content: x.content })),
+            temperature: 0.7,
+          })
+        });
+        const data = await res.json();
+        chats[currentChatId].pop();
+        if (res.ok && data.choices?.[0]?.message?.content) {
+          const reply = data.choices[0].message.content.trim();
+          const sug = generateSuggestions(reply);
+          chats[currentChatId].push({ role: "assistant", content: reply, suggestions: sug });
+        } else throw new Error(data?.error?.message || "Unknown error");
+      } catch (e) {
+        chats[currentChatId].pop();
+        chats[currentChatId].push({ role: "assistant", content: `❌ API error: ${e.message}` });
+      }
+      saveChats();
+      renderChat();
+    }
+
+    function generateSuggestions(t) {
+      return ["Can you explain more?", "Give example", "Summarize", "List more points"];
+    }
+
+    sendBtn.onclick = sendMessage;
+    promptInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") sendMessage();
+    });
+    topicBtns.forEach(b => b.onclick = () => {
+      promptInput.value = b.textContent;
+      promptInput.focus();
+    });
+    renderChatList();
+  </script>
+</body>
+</html>
